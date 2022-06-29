@@ -1,3 +1,7 @@
+# ignore downloaded and processed data and generated pngs
+*.csv
+*.png
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
