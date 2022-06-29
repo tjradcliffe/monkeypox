@@ -68,17 +68,22 @@ strDataFile = "owid_monkeypox.csv"
 strNation = "World"
 if len(sys.argv) > 1:
     if "help" in sys.argv[1] or "-h" == sys.argv[1]:
+        print("")
         print("python3 mpx_pandemic.py [-n --nations] <<Nation Name>>")
+        print("")
         print("Nation Name should be capitalized with spaces")
         print("United States for the US")
         print("UK nations reported separately")
         print("Taiwan is not part of China")
+        print("")
         print("-n or --nations lists all nations and their total case numbers")
+        print("")
         print("3 weeks with > 100 confirmed cases is required for analysis, otherwise")
         print(" just the summary file is generated")
         print("")
         print("Nation Name generates YYYY-DD-MM_owid_nation_name.csv and")
         print(" YYYY-DD-MM_fit_nation_name.png")
+        print("")
         print("If no Nation Name given World is used")
         print("")
         print("Data is downloaded from https://ourworldindata.org/monkeypox via")
@@ -97,10 +102,7 @@ if len(sys.argv) > 1:
 
 # setup date info
 pToday = datetime.today()
-nYear = pToday.year
-nMonth = pToday.month
-nDay = pToday.day
-strDate = "-".join(map(str, (nYear, nMonth, nDay)))
+strDate = str(pToday.date())
 nWeekday = pToday.weekday()
 #print(nWeekday)
 
@@ -113,7 +115,7 @@ mapDate = {}
 nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
 with open(strDataFile) as inFile:
-    lstHeader = inFile.readline().split(",")
+#    lstHeader = inFile.readline().split(",")
 #    print(lstHeader)
     for strLine in inFile:
         lstMatches = reValue.findall(strLine)
