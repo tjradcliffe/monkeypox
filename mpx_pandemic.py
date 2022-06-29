@@ -13,6 +13,10 @@ import matplotlib.dates as mdates
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+strNation = "World"
+if len(sys.argv) > 1:
+    strNation = sys.argv[1]
+
 # setup date info
 pToday = datetime.today()
 nYear = pToday.year
@@ -48,8 +52,7 @@ reValue = re.compile(r'"(.*?)"')
 pBaseDate = datetime(2022, 4, 18+nWeekday)
 mapDate = {}
 nMaxDay = 0
-strNation = "World"
-strNationLower = strNation.lower()
+strNationLower = strNation.lower().replace(" ","_")
 with open(strDataFile) as inFile:
     lstHeader = inFile.readline().split(",")
 #    print(lstHeader)
@@ -94,6 +97,11 @@ with open(strDate+"_owid_"+strNationLower+".csv", "w") as outFile:
             lstCount.append(nCount)
             
 print("Residual (should be 0):",len(lstWeek))
+
+# bail if not enough data
+if len(lstDays) - nFitStart < 3:
+    print("Insufficient data for fitting. Must have three weeks > 100 new cases per week")
+    sys.exit(0)
 
 # fit the data
 lstCoeffs = np.polyfit(lstDays[nFitStart:], np.log(lstCount[nFitStart:]), deg=1)
