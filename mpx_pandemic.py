@@ -40,7 +40,7 @@ def download_data(strDataFile):
 def list_nations(strDataFile):
     
     # download if required
-    download_data()
+    download_data(strDataFile)
     
     # find nations
     mapNations = {}
@@ -71,6 +71,8 @@ if len(sys.argv) > 1:
         print("python3 mpx_pandemic.py [-n --nations] <<Nation Name>>")
         print("Nation Name should be capitalized with spaces")
         print("United States for the US")
+        print("UK nations reported separately")
+        print("Taiwan is not part of China")
         print("-n or --nations lists all nations and their total case numbers")
         print("3 weeks with > 100 confirmed cases is required for analysis, otherwise")
         print(" just the summary file is generated")
