@@ -13,8 +13,84 @@ import matplotlib.dates as mdates
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# for dealing with commas in quoted fields
+reValue = re.compile(r'"(.*?)"')
+
+def download_data(strDataFile):
+    # download the data if required
+    bDownload = True
+    if os.path.exists(strDataFile):
+        pStat = os.stat(strDataFile)
+        nTime = int(time.time())
+    #    print(nTime, pStat.st_mtime)
+        if (nTime-pStat.st_mtime)/3600 < 12:
+            bDownload = False
+
+    if bDownload:
+        print("****DOWNLOADING****")
+        pResponse = requests.get("https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
+        if pResponse.status_code != 200:
+            print("Failed to download: https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
+            print("Error code:", pResponse.status_code)
+            sys.exit(-1)
+
+        with open(strDataFile, "w") as outFile:
+            outFile.write(pResponse.text+"\n")
+
+def list_nations(strDataFile):
+    
+    # download if required
+    download_data()
+    
+    # find nations
+    mapNations = {}
+    with open(strDataFile) as inFile:
+        for strLine in inFile:
+            lstMatches = reValue.findall(strLine)
+            for strMatch in lstMatches:
+                strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
+            lstLine = strLine.split(",")
+            if len(lstLine) != 32: continue
+            if lstLine[1].lower() == "confirmed": 
+                strCountry = lstLine[4]
+                if strCountry not in mapNations:
+                    mapNations[strCountry] = 0
+                mapNations[strCountry] += 1
+                
+    lstNations = list(mapNations)
+    lstNations.sort()
+    for strCountry in lstNations:
+        print(strCountry, mapNations[strCountry])
+        
+###
+strDataFile = "owid_monkeypox.csv"
+
 strNation = "World"
 if len(sys.argv) > 1:
+    if "help" in sys.argv[1] or "-h" == sys.argv[1]:
+        print("python3 mpx_pandemic.py [-n --nations] <<Nation Name>>")
+        print("Nation Name should be capitalized with spaces")
+        print("United States for the US")
+        print("-n or --nations lists all nations and their total case numbers")
+        print("3 weeks with > 100 confirmed cases is required for analysis, otherwise")
+        print(" just the summary file is generated")
+        print("")
+        print("Nation Name generates YYYY-DD-MM_owid_nation_name.csv and")
+        print(" YYYY-DD-MM_fit_nation_name.png")
+        print("If no Nation Name given World is used")
+        print("")
+        print("Data is downloaded from https://ourworldindata.org/monkeypox via")
+        print(" https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
+        print(" to "+strDataFile)
+        sys.exit(0)
+    elif "-n" == sys.argv[1] or "--nations" == sys.argv[1]:
+        list_nations(strDataFile)
+        sys.exit(0)
+    elif sys.argv[1].startswith("-"):
+        print("Unrecognized option: ", sys.argv[1])
+        print("Try -h for help")
+        sys.exit(0)
+        
     strNation = sys.argv[1]
 
 # setup date info
@@ -26,27 +102,8 @@ strDate = "-".join(map(str, (nYear, nMonth, nDay)))
 nWeekday = pToday.weekday()
 #print(nWeekday)
 
-# download the data if required
-bDownload = True
-strDataFile = "owid_monkeypox.csv"
-if os.path.exists(strDataFile):
-    pStat = os.stat(strDataFile)
-    nTime = int(time.time())
-#    print(nTime, pStat.st_mtime)
-    if (nTime-pStat.st_mtime)/3600 < 12:
-        bDownload = False
-
-if bDownload:
-    print("****DOWNLOADING****")
-    pResponse = requests.get("https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
-    if pResponse.status_code != 200:
-        print("Get failed")
-        sys.exit(-1)
-
-    with open(strDataFile, "w") as outFile:
-        outFile.write(pResponse.text+"\n")
-
-reValue = re.compile(r'"(.*?)"')
+# download if required
+download_data(strDataFile)
 
 # import the data
 pBaseDate = datetime(2022, 4, 18+nWeekday)
