@@ -104,13 +104,13 @@ if len(sys.argv) > 1:
 pToday = datetime.today()
 strDate = str(pToday.date())
 nWeekday = pToday.weekday()
-#print(nWeekday)
+print(nWeekday)
 
 # download if required
 download_data(strDataFile)
 
 # import the data
-pBaseDate = datetime(2022, 4, 18+nWeekday)
+pBaseDate = datetime(2022, 4, 19+nWeekday)
 mapDate = {}
 nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
@@ -188,16 +188,20 @@ pPlot.set_yscale("log")
 pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
-pPlot.annotate('Doubling time: '+str(fDoublingTime)[0:5]+" days",
+pPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
             xy=(.14, .85), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=12)
-pPlot.annotate('Fit: '+str(fBase)[0:5]+"+exp(nDay/"+str(fEfoldingTime)[0:5]+")",
+pPlot.annotate("(Covid Omicron Doubling Time = 10.3 days)",
             xy=(.14, .8), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
-pPlot.annotate('Start day: '+str(pBaseDate.date()),
+pPlot.annotate('Fit: '+str(fBase)[0:5]+"+exp(nDay/"+str(fEfoldingTime)[0:5]+")",
             xy=(.14, .77), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=8)            
+pPlot.annotate('Start day: '+str(pBaseDate.date()),
+            xy=(.14, .74), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
