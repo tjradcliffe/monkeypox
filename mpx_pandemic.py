@@ -115,7 +115,7 @@ mapDate = {}
 nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
 with open(strDataFile) as inFile:
-#    lstHeader = inFile.readline().split(",")
+    lstHeader = inFile.readline().split(",")
 #    print(lstHeader)
     for strLine in inFile:
         lstMatches = reValue.findall(strLine)
@@ -124,7 +124,7 @@ with open(strDataFile) as inFile:
         lstLine = strLine.split(",")
         if len(lstLine) != 32: continue
         if lstLine[1].lower() == "confirmed": 
-            if strNationLower == "world" or lstLine[4].lower() == strNationLower:
+            if strNation == "World" or lstLine[4] == strNation:
                 nYear, nMonth, nDay = map(int, lstLine[8].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
                 nDay = (pDate-pBaseDate).days
