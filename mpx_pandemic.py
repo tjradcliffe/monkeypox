@@ -103,14 +103,12 @@ if len(sys.argv) > 1:
 # setup date info
 pToday = datetime.today()
 strDate = str(pToday.date())
-nWeekday = pToday.weekday()
-print(nWeekday)
 
 # download if required
 download_data(strDataFile)
 
 # import the data
-pBaseDate = datetime(2022, 4, 19+nWeekday)
+pBaseDate = datetime(2022, 4, 20)
 mapDate = {}
 nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
@@ -120,7 +118,7 @@ with open(strDataFile) as inFile:
     for strLine in inFile:
         lstMatches = reValue.findall(strLine)
         for strMatch in lstMatches:
-            strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
+            strLine = strLine.replace(strMatch, strMatch.replace(",", " "))
         lstLine = strLine.split(",")
         if len(lstLine) != 32: continue
         if lstLine[1].lower() == "confirmed": 
@@ -133,34 +131,35 @@ with open(strDataFile) as inFile:
                 mapDate[nDay] += 1
                 if nDay > nMaxDay: nMaxDay = nDay
 
-# accumulate weekly data            
+# accumulate weekly data, working backward to ensure full week at end
 lstWeek = []
 lstDays = []
 lstCount = []
 nFitStart = -1
 with open(strDate+"_owid_"+strNationLower+".csv", "w") as outFile:
-    for nI in range(nMaxDay+1):
+    for nI in range(nMaxDay, -1, -1):
         if nI in mapDate:
             lstWeek.append(mapDate[nI])
-    #        print(nI)
         else:
             lstWeek.append(0)
 
         if len(lstWeek) == 7:
             nCount = sum(lstWeek)
-            outFile.write(str(nI-3)+" "+str(nCount)+"\n")
-#            print(nI-3, nCount)
+            outFile.write(str(nI+3)+" "+str(nCount)+"\n")
+            print(nI+3, nCount)
             lstWeek = []
-            if nCount > 100 and nFitStart < 0:
-                nFitStart = len(lstDays)
 
-            lstDays.append(nI-3)
-            lstCount.append(nCount)
+            lstDays.insert(0, nI+3)
+            lstCount.insert(0, nCount)
+
+# only fit for days > 100
+for nI, nCount in enumerate(lstCount):
+    if nCount > 100:
+        nFitStart = nI
+        break
             
-print("Residual (should be 0):",len(lstWeek))
-
 # bail if not enough data
-if len(lstDays) - nFitStart < 3:
+if nFitStart < 0 or len(lstDays) - nFitStart < 3:
     print("Insufficient data for fitting. Must have three weeks > 100 new cases per week")
     sys.exit(0)
 
@@ -171,11 +170,19 @@ fBase = math.exp(lstCoeffs[1])
 fDoublingTime = math.log(2)*fEfoldingTime
 print("Doubling time (days):", fDoublingTime)
 fit = np.poly1d(lstCoeffs)
+fLogRMS = 0.0
+nCount = 0
 with open(strDate+"_fit_"+strNationLower+".csv", "w") as outFile:
     for nI, nDay in enumerate(lstDays):
-        if nI >= nFitStart:
+        if nFitStart > 0 and nI >= nFitStart:
             print(nDay, lstCount[nI], math.exp(fit(nDay)))
+            fLogRMS += (math.log(lstCount[nI])-fit(nDay))**2
+            nCount += 1
             outFile.write(" ".join(map(str, (nDay, lstCount[nI], math.exp(fit(nDay)))))+"\n")
+
+print("")
+if nCount > 0:
+    print("Log RMS: ", str(math.sqrt(fLogRMS/nCount))[0:5])
 
 # plot with dates
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
@@ -192,10 +199,10 @@ pPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
             xy=(.14, .85), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=12)
-pPlot.annotate("(Covid Omicron Doubling Time was 10.3 days)",
+pPlot.annotate("(Comparison: Dec/Jan Omicron Doubling Time was 10.3 days)",
             xy=(.14, .8), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
-            fontsize=8)            
+            fontsize=6)            
 pPlot.annotate('Fit: '+str(fBase)[0:5]+"+exp(nDay/"+str(fEfoldingTime)[0:5]+")",
             xy=(.14, .77), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
