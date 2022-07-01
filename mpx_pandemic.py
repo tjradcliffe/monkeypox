@@ -192,7 +192,7 @@ pPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
             xy=(.14, .85), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=12)
-pPlot.annotate("(Covid Omicron Doubling Time = 10.3 days)",
+pPlot.annotate("(Covid Omicron Doubling Time was 10.3 days)",
             xy=(.14, .8), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
