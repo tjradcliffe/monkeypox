@@ -173,6 +173,8 @@ fit = np.poly1d(lstCoeffs)
 fLogRMS = 0.0
 nCount = 0
 with open(strDate+"_fit_"+strNationLower+".csv", "w") as outFile:
+    outFile.write("# Doubling: "+str(fDoublingTime)+"\n")
+    outFile.write("# "+str(fBase)+"+exp(nDay/"+str(fEfoldingTime)+")\n")
     for nI, nDay in enumerate(lstDays):
         if nFitStart > 0 and nI >= nFitStart:
             print(nDay, lstCount[nI], math.exp(fit(nDay)))
