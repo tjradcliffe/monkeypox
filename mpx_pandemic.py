@@ -100,6 +100,8 @@ if len(sys.argv) > 1:
         
     strNation = sys.argv[1]
 
+print(strNation)
+
 # setup date info
 pToday = datetime.today()
 strDate = str(pToday.date())
@@ -146,7 +148,7 @@ with open(strDate+"_owid_"+strNationLower+".csv", "w") as outFile:
         if len(lstWeek) == 7:
             nCount = sum(lstWeek)
             outFile.write(str(nI+3)+" "+str(nCount)+"\n")
-            print(nI+3, nCount)
+#            print(nI+3, nCount)
             lstWeek = []
 
             lstDays.insert(0, nI+3)
@@ -168,7 +170,6 @@ lstCoeffs = np.polyfit(lstDays[nFitStart:], np.log(lstCount[nFitStart:]), deg=1)
 fEfoldingTime = 1/lstCoeffs[0]
 fBase = math.exp(lstCoeffs[1])
 fDoublingTime = math.log(2)*fEfoldingTime
-print("Doubling time (days):", fDoublingTime)
 fit = np.poly1d(lstCoeffs)
 fLogRMS = 0.0
 nCount = 0
@@ -177,14 +178,14 @@ with open(strDate+"_fit_"+strNationLower+".csv", "w") as outFile:
     outFile.write("# "+str(fBase)+"+exp(nDay/"+str(fEfoldingTime)+")\n")
     for nI, nDay in enumerate(lstDays):
         if nFitStart > 0 and nI >= nFitStart:
-            print(nDay, lstCount[nI], math.exp(fit(nDay)))
+            print(nDay, lstCount[nI], int(math.exp(fit(nDay))))
             fLogRMS += (math.log(lstCount[nI])-fit(nDay))**2
             nCount += 1
             outFile.write(" ".join(map(str, (nDay, lstCount[nI], math.exp(fit(nDay)))))+"\n")
 
-print("")
 if nCount > 0:
-    print("Log RMS: ", str(math.sqrt(fLogRMS/nCount))[0:5])
+    print("Doubling time (days): %4.2f"%fDoublingTime)
+    print("RMS of Log Fit: %5.3F"%math.sqrt(fLogRMS/nCount))
 
 # plot with dates
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
