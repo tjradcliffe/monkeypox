@@ -127,6 +127,7 @@ with open(strDataFile) as inFile:
             if strNation == "World" or lstLine[4] == strNation:
                 nYear, nMonth, nDay = map(int, lstLine[8].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
+#                print(nYear, nMonth, nDay)
                 nDay = (pDate-pBaseDate).days
                 if nDay not in mapDate:
                     mapDate[nDay] = 0
