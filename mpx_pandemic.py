@@ -66,10 +66,13 @@ def list_nations(strDataFile):
 strDataFile = "owid_monkeypox.csv"
 
 strNation = "World"
+nNationIndex = 1
+bUC = False
+strUC = ""
 if len(sys.argv) > 1:
     if "help" in sys.argv[1] or "-h" == sys.argv[1]:
         print("")
-        print("python3 mpx_pandemic.py [-n --nations] <<Nation Name>>")
+        print("python3 mpx_pandemic.py [-n --nations] [-c] <<Nation Name>>")
         print("")
         print("Nation Name should be capitalized with spaces")
         print("United States for the US")
@@ -77,6 +80,8 @@ if len(sys.argv) > 1:
         print("Taiwan is not part of China")
         print("")
         print("-n or --nations lists all nations and their total case numbers")
+        print("")
+        print("-c drops the confirmed case requirement (adds _uc to output filenames")
         print("")
         print("3 weeks with > 100 confirmed cases is required for analysis, otherwise")
         print(" just the summary file is generated")
@@ -93,12 +98,17 @@ if len(sys.argv) > 1:
     elif "-n" == sys.argv[1] or "--nations" == sys.argv[1]:
         list_nations(strDataFile)
         sys.exit(0)
+    elif "-c" == sys.argv[1]:
+        bUC = True
+        strUC = "_uc"
+        nNationIndex = 2
     elif sys.argv[1].startswith("-"):
         print("Unrecognized option: ", sys.argv[1])
         print("Try -h for help")
         sys.exit(0)
         
-    strNation = sys.argv[1]
+    if len(sys.argv) > nNationIndex:
+        strNation = sys.argv[nNationIndex]
 
 print(strNation)
 
@@ -123,9 +133,12 @@ with open(strDataFile) as inFile:
             strLine = strLine.replace(strMatch, strMatch.replace(",", " "))
         lstLine = strLine.split(",")
         if len(lstLine) != 32: continue
-        if lstLine[1].lower() == "confirmed": 
+        if lstLine[1].lower() == "confirmed" or (bUC and lstLine[1] != "discarded"): 
             if strNation == "World" or lstLine[4] == strNation:
-                nYear, nMonth, nDay = map(int, lstLine[8].split("-"))
+                if bUC:
+                    nYear, nMonth, nDay = map(int, lstLine[28].split("-"))
+                else:
+                    nYear, nMonth, nDay = map(int, lstLine[8].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
 #                print(nYear, nMonth, nDay)
                 nDay = (pDate-pBaseDate).days
@@ -139,7 +152,7 @@ lstWeek = []
 lstDays = []
 lstCount = []
 nFitStart = -1
-with open(strDate+"_owid_"+strNationLower+".csv", "w") as outFile:
+with open(strDate+"_owid_"+strNationLower+strUC+".csv", "w") as outFile:
     for nI in range(nMaxDay, -1, -1):
         if nI in mapDate:
             lstWeek.append(mapDate[nI])
@@ -174,7 +187,7 @@ fDoublingTime = math.log(2)*fEfoldingTime
 fit = np.poly1d(lstCoeffs)
 fLogRMS = 0.0
 nCount = 0
-with open(strDate+"_fit_"+strNationLower+".csv", "w") as outFile:
+with open(strDate+"_fit_"+strNationLower+strUC+".csv", "w") as outFile:
     outFile.write("# Doubling: "+str(fDoublingTime)+"\n")
     outFile.write("# "+str(fBase)+"+exp(nDay/"+str(fEfoldingTime)+")\n")
     for nI, nDay in enumerate(lstDays):
@@ -196,7 +209,11 @@ pFigure, pPlot = plt.subplots()
 pPlot.xaxis.set_major_locator(pLocator)
 pPlot.xaxis.set_major_formatter(pFormatter)
 pPlot.set_yscale("log")
-pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
+if bUC:
+    pPlot.set_title("Monkeypox "+strNation+" Weekly New Cases (incl. unconfirmed)")
+else:
+    pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
+    
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
 pPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
@@ -222,4 +239,4 @@ pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox
 pPlot.plot(lstDates[nFitStart:], lstCount[nFitStart:], "bx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
 pFigure.autofmt_xdate()
-pFigure.savefig(strDate+"_owid_"+strNationLower+".png")
+pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
