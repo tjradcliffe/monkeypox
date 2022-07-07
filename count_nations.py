@@ -51,6 +51,12 @@ def count_nations(strDataFile):
         if not len(setTotal):
             nFitStart = nDay # set to last zero-day
 
+    # dump to file
+    with open("monkeypox_nation_count.csv", "w") as outFile:
+        outFile.write("Start day: "+str((pBaseDate+timedelta(days=nFitStart)).date())+"\n")
+        for nI in range(nFitStart, len(lstDays)):
+            outFile.write(str(nI-nFitStart)+" "+str(lstNationCount[nI])+"\n")
+
     # plot with dates
     lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
     pLocator = mdates.AutoDateLocator()
