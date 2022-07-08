@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 import math
 import os
 import re
-import requests
 import sys
 import time
 
@@ -132,13 +131,16 @@ with open(strDataFile) as inFile:
 lstWeek = []
 lstDays = []
 lstCount = []
+lstDayCount = []
 nFitStart = -1
 with open(strDate+"_owid_"+strNationLower+strUC+".csv", "w") as outFile:
     for nI in range(nMaxDay, -1, -1):
         if nI in mapDate:
             lstWeek.append(mapDate[nI])
+            lstDayCount.insert(0, mapDate[nI]) # keep track of daily
         else:
             lstWeek.append(0)
+            lstDayCount.insert(0, 0) # keep track of daily
 
         if len(lstWeek) == 7:
             nCount = sum(lstWeek)
@@ -148,6 +150,14 @@ with open(strDate+"_owid_"+strNationLower+strUC+".csv", "w") as outFile:
 
             lstDays.insert(0, nI+3)
             lstCount.insert(0, nCount)
+
+# dump day count for debugging/inspections
+with open("monkeypox_world_daily.csv", "w") as outFile:
+    nTotal = 0
+    outFile.write("# Start day: "+str(pBaseDate.date())+"\n")
+    for nI, nCount in enumerate(lstDayCount):
+        nTotal += nCount
+        outFile.write(str(nI)+" "+str(nCount)+" "+str(nTotal)+"\n")
 
 # only fit for days > 100
 for nI, nCount in enumerate(lstCount):
@@ -205,7 +215,7 @@ pPlot.annotate("(Comparison: Dec/Jan Omicron Doubling Time was 10.3 days)",
             xy=(.14, .8), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=6)            
-pPlot.annotate('Fit: '+str(fBase)[0:5]+"+exp(nDay/"+str(fEfoldingTime)[0:5]+")",
+pPlot.annotate('Fit: '+str(fBase)[0:5]+"*exp(nDay/"+str(fEfoldingTime)[0:5]+")",
             xy=(.14, .77), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import re
 
+import numpy as np
+
 import matplotlib
 import matplotlib.dates as mdates
 matplotlib.use("Agg")
@@ -42,20 +44,27 @@ def count_nations(strDataFile):
     setTotal = set()
     lstNationCount = []
     lstDays = []
-    nFitStart = 0
+    nDataStart = 0
     for nDay, setNations in enumerate(lstNewNations):
         setTotal = setTotal.union(setNations)
 #        print(pBaseDate+timedelta(days=nDay), len(setTotal))
         lstDays.append(nDay)
         lstNationCount.append(len(setTotal))
         if not len(setTotal):
-            nFitStart = nDay # set to last zero-day
+            nDataStart = nDay # set to last zero-day
 
+    # linear fit above day 20
+    nFitStart = nDataStart + 20
+    lstCoeffs = np.polyfit(lstDays[nFitStart:], lstNationCount[nFitStart:], deg=1)
+    fit = np.poly1d(lstCoeffs)
+    fLogRMS = 0.0
+    nCount = 0
+    
     # dump to file
     with open("monkeypox_nation_count.csv", "w") as outFile:
-        outFile.write("Start day: "+str((pBaseDate+timedelta(days=nFitStart)).date())+"\n")
-        for nI in range(nFitStart, len(lstDays)):
-            outFile.write(str(nI-nFitStart)+" "+str(lstNationCount[nI])+"\n")
+        outFile.write("# Start day: "+str((pBaseDate+timedelta(days=nDataStart)).date())+"\n")
+        for nI in range(nDataStart, len(lstDays)):
+            outFile.write(str(nI-nDataStart)+" "+str(lstNationCount[nI])+" "+str(fit(nI))+"\n")
 
     # plot with dates
     lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
@@ -69,10 +78,11 @@ def count_nations(strDataFile):
     pPlot.set_xlabel("Date")
     pPlot.set_ylabel("Nations")
     pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
-                xy=(.14, .85), xycoords='figure fraction',
+                xy=(.3, .23), xycoords='figure fraction',
                 horizontalalignment='left', verticalalignment='top',
                 fontsize=8)
-    pPlot.plot(lstDates[nFitStart:], lstNationCount[nFitStart:], "bx")
+    pPlot.plot(lstDates[nDataStart:], lstNationCount[nDataStart:], "bx")
+    pPlot.plot(lstDates[nFitStart:], [fit(x) for x in lstDays[nFitStart:]])
     pFigure.autofmt_xdate()
     pFigure.savefig("monkeypox_nation_count.png")
 
