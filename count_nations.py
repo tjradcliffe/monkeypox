@@ -77,12 +77,16 @@ def count_nations(strDataFile):
         
     pPlot.set_xlabel("Date")
     pPlot.set_ylabel("Nations")
+    pPlot.annotate('Slope: '+str(lstCoeffs[0])[0:4]+" nations/day",
+                xy=(.14, .85), xycoords='figure fraction',
+                horizontalalignment='left', verticalalignment='top',
+                fontsize=8, color="r")            
     pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
                 xy=(.3, .23), xycoords='figure fraction',
                 horizontalalignment='left', verticalalignment='top',
                 fontsize=8)
     pPlot.plot(lstDates[nDataStart:], lstNationCount[nDataStart:], "bx")
-    pPlot.plot(lstDates[nFitStart:], [fit(x) for x in lstDays[nFitStart:]])
+    pPlot.plot(lstDates[nFitStart:], [fit(x) for x in lstDays[nFitStart:]], "r")
     pFigure.autofmt_xdate()
     pFigure.savefig("monkeypox_nation_count.png")
 
