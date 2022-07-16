@@ -30,7 +30,7 @@ def list_nations(strDataFile):
             for strMatch in lstMatches:
                 strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
             lstLine = strLine.split(",")
-            if len(lstLine) != 32: continue
+            if len(lstLine) < 32: continue
             if lstLine[1].lower() == "confirmed": 
                 strCountry = lstLine[4]
                 if strCountry not in mapNations:
@@ -106,19 +106,21 @@ nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
 with open(strDataFile) as inFile:
     lstHeader = inFile.readline().split(",")
-#    print(lstHeader)
+#    for nI, strWord in enumerate(lstHeader):
+#        print(nI, strWord)
+
     for strLine in inFile:
         lstMatches = reValue.findall(strLine)
         for strMatch in lstMatches:
             strLine = strLine.replace(strMatch, strMatch.replace(",", " "))
         lstLine = strLine.split(",")
-        if len(lstLine) != 32: continue
+        if len(lstLine) < 32: continue
         if lstLine[1].lower() == "confirmed" or (bUC and lstLine[1] != "discarded"): 
             if strNation == "World" or lstLine[4] == strNation:
                 if bUC:
                     nYear, nMonth, nDay = map(int, lstLine[28].split("-"))
                 else:
-                    nYear, nMonth, nDay = map(int, lstLine[8].split("-"))
+                    nYear, nMonth, nDay = map(int, lstLine[9].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
 #                print(nYear, nMonth, nDay)
                 nDay = (pDate-pBaseDate).days

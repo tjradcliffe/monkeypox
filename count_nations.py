@@ -34,9 +34,9 @@ def count_nations(strDataFile):
             for strMatch in lstMatches: # step on commas in quoted strings
                 strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
             lstLine = strLine.split(",")
-            if len(lstLine) != 32: continue
+            if len(lstLine) < 32: continue
             if lstLine[1].lower() == "confirmed": 
-                nYear, nMonth, nDay = map(int, lstLine[8].split("-"))
+                nYear, nMonth, nDay = map(int, lstLine[9].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
                 nDays = (pDate-pBaseDate).days
                 lstNewNations[nDays].add(lstLine[4])
@@ -65,6 +65,8 @@ def count_nations(strDataFile):
         outFile.write("# Start day: "+str((pBaseDate+timedelta(days=nDataStart)).date())+"\n")
         for nI in range(nDataStart, len(lstDays)):
             outFile.write(str(nI-nDataStart)+" "+str(lstNationCount[nI])+" "+str(fit(nI))+"\n")
+
+    print("Number of nations: ", lstNationCount[-1])
 
     # plot with dates
     lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]

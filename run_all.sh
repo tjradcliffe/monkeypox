@@ -1,4 +1,3 @@
 python3 mpx_pandemic.py
-python3 mpx_pandemic.py Germany
-python3 mpx_pandemic.py England
+python3 count_nations.py
 
