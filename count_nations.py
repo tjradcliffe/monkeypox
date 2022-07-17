@@ -16,7 +16,7 @@ reValue = re.compile(r'"(.*?)"')
 def count_nations(strDataFile):
     
     # download if required
-    download_data(strDataFile)
+    nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = download_data(strDataFile)
     
     # find nations
     lstNewNations = []
@@ -34,12 +34,12 @@ def count_nations(strDataFile):
             for strMatch in lstMatches: # step on commas in quoted strings
                 strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
             lstLine = strLine.split(",")
-            if len(lstLine) < 32: continue
+            if len(lstLine) != nHeaderSize: continue
             if lstLine[1].lower() == "confirmed": 
-                nYear, nMonth, nDay = map(int, lstLine[9].split("-"))
+                nYear, nMonth, nDay = map(int, lstLine[nDateIndex].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
                 nDays = (pDate-pBaseDate).days
-                lstNewNations[nDays].add(lstLine[4])
+                lstNewNations[nDays].add(lstLine[nCountryIndex])
                 
     setTotal = set()
     lstNationCount = []

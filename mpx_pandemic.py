@@ -20,7 +20,23 @@ from download_mpx_owid import download_data
 def list_nations(strDataFile):
     
     # download if required
-    download_data(strDataFile)
+    try:
+        nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = download_data(strDataFile)
+    except Exception as e:
+        print(e)
+        print("PROBABLY DUE TO DATA FILE FORMAT CHANGE")
+        print("Expect columns: Status, Country, Date_confirmation, Date_entry to exist")
+        print("Check downloaded file: ", strDataFile," and see if header has changed")
+        sys.exit(0)
+    
+    mapISO3 = {}
+    with open('iso3.csv') as inFile:
+        for strLine in inFile:
+            lstLine = strLine.strip().split(':')
+            if len(lstLine) == 2:
+                mapISO3[lstLine[1]]  = lstLine[0]
+            else:
+                print("Ignored: ", strLine.strip())
     
     # find nations
     mapNations = {}
@@ -30,9 +46,9 @@ def list_nations(strDataFile):
             for strMatch in lstMatches:
                 strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
             lstLine = strLine.split(",")
-            if len(lstLine) < 32: continue
-            if lstLine[1].lower() == "confirmed": 
-                strCountry = lstLine[4]
+            if len(lstLine) != nHeaderSize: continue
+            if lstLine[nStatusIndex].lower() == "confirmed": 
+                strCountry = lstLine[nCountryIndex]
                 if strCountry not in mapNations:
                     mapNations[strCountry] = 0
                 mapNations[strCountry] += 1
@@ -40,7 +56,10 @@ def list_nations(strDataFile):
     lstNations = list(mapNations)
     lstNations.sort()
     for strCountry in lstNations:
-        print(strCountry, mapNations[strCountry])
+        if strCountry in mapISO3:
+            print(strCountry, mapISO3[strCountry], mapNations[strCountry])
+        else:
+            print(strCountry, "-----", mapNations[strCountry])
         
 ###
 strDataFile = "owid_monkeypox.csv"
@@ -52,24 +71,22 @@ strUC = ""
 if len(sys.argv) > 1:
     if "help" in sys.argv[1] or "-h" == sys.argv[1]:
         print("")
-        print("python3 mpx_pandemic.py [-n --nations] [-c] <<Nation Name>>")
+        print("python3 mpx_pandemic.py [-n --nations] [-c] <<ISO3>>")
         print("")
-        print("Nation Name should be capitalized with spaces")
-        print("United States for the US")
-        print("UK nations reported separately")
+        print("ISO3 is three-letter ISO code")
         print("Taiwan is not part of China")
         print("")
-        print("-n or --nations lists all nations and their total case numbers")
+        print("-n or --nations lists all nations (including name and ISO code) and their total case numbers")
         print("")
         print("-c drops the confirmed case requirement (adds _uc to output filenames")
         print("")
-        print("3 weeks with > 100 confirmed cases is required for analysis, otherwise")
+        print("3 weeks with > 200 confirmed cases is required for analysis, otherwise")
         print(" just the summary file is generated")
         print("")
-        print("Nation Name generates YYYY-DD-MM_owid_nation_name.csv and")
+        print("ISO3 argument generates YYYY-DD-MM_owid_ISO3.csv and")
         print(" YYYY-DD-MM_fit_nation_name.png")
         print("")
-        print("If no Nation Name given World is used")
+        print("If no ISO3 given World is used")
         print("")
         print("Data is downloaded from https://ourworldindata.org/monkeypox via")
         print(" https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
@@ -90,15 +107,22 @@ if len(sys.argv) > 1:
     if len(sys.argv) > nNationIndex:
         strNation = sys.argv[nNationIndex]
 
-print(strNation)
+print("Processing: ", strNation)
 
 # setup date info
 pToday = datetime.today()
 strDate = str(pToday.date())
 
 # download if required
-download_data(strDataFile)
-
+try:
+    nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = download_data(strDataFile)
+except Exception as e:
+    print(e)
+    print("PROBABLY DUE TO DATA FILE FORMAT CHANGE")
+    print("Expect columns: Status, Country, Date_confirmation, Date_entry to exist")
+    print("Check downloaded file: ", strDataFile," and see if header has changed")
+    sys.exit(0)
+    
 # import the data
 pBaseDate = datetime(2022, 4, 20)
 mapDate = {}
@@ -106,21 +130,19 @@ nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
 with open(strDataFile) as inFile:
     lstHeader = inFile.readline().split(",")
-#    for nI, strWord in enumerate(lstHeader):
-#        print(nI, strWord)
-
+    
     for strLine in inFile:
         lstMatches = reValue.findall(strLine)
         for strMatch in lstMatches:
             strLine = strLine.replace(strMatch, strMatch.replace(",", " "))
         lstLine = strLine.split(",")
-        if len(lstLine) < 32: continue
-        if lstLine[1].lower() == "confirmed" or (bUC and lstLine[1] != "discarded"): 
-            if strNation == "World" or lstLine[4] == strNation:
+        if len(lstLine) != nHeaderSize: continue
+        if lstLine[nStatusIndex].lower() == "confirmed" or (bUC and lstLine[nStatusIndex] != "discarded"): 
+            if strNation == "World" or lstLine[nCountryIndex] == strNation:
                 if bUC:
-                    nYear, nMonth, nDay = map(int, lstLine[28].split("-"))
+                    nYear, nMonth, nDay = map(int, lstLine[nUnconfirmedDateIndex].split("-"))
                 else:
-                    nYear, nMonth, nDay = map(int, lstLine[9].split("-"))
+                    nYear, nMonth, nDay = map(int, lstLine[nDateIndex].split("-"))
                 pDate = datetime(nYear, nMonth, nDay)
 #                print(nYear, nMonth, nDay)
                 nDay = (pDate-pBaseDate).days
@@ -154,22 +176,22 @@ with open(strDate+"_owid_"+strNationLower+strUC+".csv", "w") as outFile:
             lstCount.insert(0, nCount)
 
 # dump day count for debugging/inspections
-with open("monkeypox_world_daily.csv", "w") as outFile:
+with open("monkeypox_"+strNationLower+"_daily.csv", "w") as outFile:
     nTotal = 0
     outFile.write("# Start day: "+str(pBaseDate.date())+"\n")
     for nI, nCount in enumerate(lstDayCount):
         nTotal += nCount
         outFile.write(str(nI)+" "+str(nCount)+" "+str(nTotal)+"\n")
 
-# only fit for days > 100
+# only fit for days > 200
 for nI, nCount in enumerate(lstCount):
-    if nCount > 100:
+    if nCount > 200:
         nFitStart = nI
         break
             
 # bail if not enough data
 if nFitStart < 0 or len(lstDays) - nFitStart < 3:
-    print("Insufficient data for fitting. Must have three weeks > 100 new cases per week")
+    print("Insufficient data for fitting. Must have three weeks > 200 new cases per week")
     sys.exit(0)
 
 # fit the data
