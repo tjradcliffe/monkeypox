@@ -219,6 +219,9 @@ if nCount > 0:
     print("Doubling time (days): %4.2f"%fDoublingTime)
     print("RMS of Log Fit: %5.3F"%math.sqrt(fLogRMS/nCount))
 
+# correct last point for incomplete data
+lstCount[-1] = 1.15*lstCount[-1]
+
 # plot with dates
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
 pLocator = mdates.AutoDateLocator()
@@ -250,11 +253,20 @@ pPlot.annotate('Start day: '+str(pBaseDate.date()),
             xy=(.14, .74), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
+pPlot.annotate('x',
+            xy=(.14, .715), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=10, color="r")            
+pPlot.annotate('= partial data, corrected',
+            xy=(.16, .71), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=8)            
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
             xy=(.3, .25), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)
-pPlot.plot(lstDates[nFitStart:], lstCount[nFitStart:], "bx")
+pPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
+pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
 pFigure.autofmt_xdate()
 pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
@@ -290,11 +302,20 @@ pPlot.annotate('Start day: '+str(pBaseDate.date()),
             xy=(.14, .74), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
+pPlot.annotate('x',
+            xy=(.14, .715), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=10, color="r")            
+pPlot.annotate('= partial data, corrected',
+            xy=(.16, .71), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=8)            
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
             xy=(.3, .25), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)
-pPlot.plot(lstDates[nFitStart:], lstCount[nFitStart:], "bx")
+pPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
+pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
 pFigure.autofmt_xdate()
 strUC += "_linear"
