@@ -128,6 +128,7 @@ pBaseDate = datetime(2022, 4, 20)
 mapDate = {}
 nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
+pLastDate = pBaseDate
 with open(strDataFile) as inFile:
     lstHeader = inFile.readline().split(",")
     
@@ -150,6 +151,10 @@ with open(strDataFile) as inFile:
                     mapDate[nDay] = 0
                 mapDate[nDay] += 1
                 if nDay > nMaxDay: nMaxDay = nDay
+                if pDate > pLastDate: pLastDate = pDate
+
+# look at most recent data in file
+print("Last updated: ", pLastDate," which was ", (pToday-pLastDate).days," days ago")
 
 # skip the last few days as they are generally not up to date
 nMaxDay -= 3
