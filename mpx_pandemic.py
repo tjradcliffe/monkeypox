@@ -115,13 +115,30 @@ strDate = str(pToday.date())
 
 # download if required
 try:
-    nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = download_data(strDataFile)
+    download_data(strDataFile)
 except Exception as e:
     print(e)
     print("PROBABLY DUE TO DATA FILE FORMAT CHANGE")
     print("Expect columns: Status, Country, Date_confirmation, Date_entry to exist")
     print("Check downloaded file: ", strDataFile," and see if header has changed")
     sys.exit(0)
+
+# get columns
+with open(strDataFile) as inFile:
+    lstHeader = inFile.readline().split(",")
+    nHeaderSize = len(lstHeader)
+    for nI, strWord in enumerate(lstHeader):
+        if strWord == "Country_ISO3":
+            nCountryIndex = nI
+        elif strWord == "Date_confirmation":
+            nDateIndex = nI
+        elif strWord == "Status":
+            nStatusIndex = nI
+        elif strWord == "Date_entry":
+            nUnconfirmedDateIndex = nI
+        elif strWord == "Gender":
+            nGenderIndex = nI
+#        print(nI, strWord)
     
 # import the data
 pBaseDate = datetime(2022, 4, 20)
@@ -273,6 +290,7 @@ pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox
 pPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
 pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
+pPlot.grid(True, linewidth=0.2)
 pFigure.autofmt_xdate()
 pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
 
@@ -283,7 +301,6 @@ pFormatter = mdates.AutoDateFormatter(pLocator)
 pFigure, pPlot = plt.subplots()
 pPlot.xaxis.set_major_locator(pLocator)
 pPlot.xaxis.set_major_formatter(pFormatter)
-#pPlot.set_yscale("log")
 if bUC:
     pPlot.set_title("Monkeypox "+strNation+" Weekly New Cases (incl. unconfirmed)")
 else:
@@ -291,37 +308,52 @@ else:
     
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
-pPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
-            xy=(.14, .85), xycoords='figure fraction',
-            horizontalalignment='left', verticalalignment='top',
-            fontsize=12)
-pPlot.annotate("(Comparison: Dec/Jan Omicron Doubling Time was 10.3 days)",
-            xy=(.14, .8), xycoords='figure fraction',
-            horizontalalignment='left', verticalalignment='top',
-            fontsize=6)            
 pPlot.annotate('Fit: '+str(fBase)[0:5]+"*exp(nDay/"+str(fEfoldingTime)[0:5]+")",
-            xy=(.14, .77), xycoords='figure fraction',
+            xy=(.64, .27), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
 pPlot.annotate('Start day: '+str(pBaseDate.date()),
-            xy=(.14, .74), xycoords='figure fraction',
+            xy=(.64, .24), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
 pPlot.annotate('x',
-            xy=(.14, .715), xycoords='figure fraction',
+            xy=(.64, .215), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=10, color="r")            
 pPlot.annotate('= partial data, corrected',
-            xy=(.16, .71), xycoords='figure fraction',
+            xy=(.66, .21), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
-            xy=(.3, .25), xycoords='figure fraction',
+            xy=(.3, .15), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)
 pPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
 pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
-pFigure.autofmt_xdate()
+pPlot.grid(True, linewidth=0.2)
+
+left, bottom, width, height = [0.19, 0.45, 0.4, 0.4]
+pLogPlot = pFigure.add_axes([left, bottom, width, height])
+pLogPlot.set_yscale("log")
+pLogPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
+pLogPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
+pLogPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
+pLogPlot.annotate("Log Scale", xy=(0.1, 0.9), xycoords='axes fraction', 
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=12)
+pLogPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
+            xy=(.1, .11), xycoords='axes fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=12, color="crimson")
+
+pLogPlot.set_facecolor('lightgrey')
+pLogPlot.grid(True, linewidth=0.2)
+for n, label in enumerate(pLogPlot.xaxis.get_ticklabels()):
+    label.set_fontsize(8)
+    if not n%2:
+        label.set_visible(False)
+
+#pFigure.autofmt_xdate()
 strUC += "_linear"
 pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")

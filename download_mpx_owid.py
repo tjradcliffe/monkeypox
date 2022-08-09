@@ -22,20 +22,3 @@ def download_data(strDataFile):
 
         with open(strDataFile, "w") as outFile:
             outFile.write(pResponse.text+"\n")
-
-    with open(strDataFile) as inFile:
-        lstHeader = inFile.readline().split(",")
-        nHeaderSize = len(lstHeader)
-        for nI, strWord in enumerate(lstHeader):
-            if strWord == "Country_ISO3":
-                nCountryIndex = nI
-            elif strWord == "Date_confirmation":
-                nDateIndex = nI
-            elif strWord == "Status":
-                nStatusIndex = nI
-            elif strWord == "Date_entry":
-                nUnconfirmedDateIndex = nI
-#            print(nI, strWord)
-
-    return nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex
-    
