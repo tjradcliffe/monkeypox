@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime, timedelta
 import math
 import os
@@ -9,26 +10,41 @@ import numpy as np
 
 import matplotlib
 import matplotlib.dates as mdates
-matplotlib.use("Agg")
+matplotlib.use("Agg") # have to do this before pyplot import
 import matplotlib.pyplot as plt
+
+from download_mpx_owid import download_data
 
 # for dealing with commas in quoted fields
 reValue = re.compile(r'"(.*?)"')
 
-from download_mpx_owid import download_data
+def getColumns(strDataFile):
+    """Find columns in data file"""
+    with open(strDataFile) as inFile:
+        lstHeader = inFile.readline().split(",")
+        for nI, strWord in enumerate(lstHeader):
+            if strWord == "Country_ISO3":
+                nCountryIndex = nI
+            elif strWord == "Date_confirmation":
+                nDateIndex = nI
+            elif strWord == "Status":
+                nStatusIndex = nI
+            elif strWord == "Date_entry":
+                nUnconfirmedDateIndex = nI
 
-def list_nations(strDataFile):
+    return nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex
+    
+def listNations(strDataFile):
+    """List nations and their ISO3 codes"""
     
     # download if required
     try:
-        nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = download_data(strDataFile)
+        download_data(strDataFile)
     except Exception as e:
         print(e)
-        print("PROBABLY DUE TO DATA FILE FORMAT CHANGE")
-        print("Expect columns: Status, Country, Date_confirmation, Date_entry to exist")
-        print("Check downloaded file: ", strDataFile," and see if header has changed")
         sys.exit(0)
-    
+
+    # import ISO3 data
     mapISO3 = {}
     with open('iso3.csv') as inFile:
         for strLine in inFile:
@@ -37,10 +53,14 @@ def list_nations(strDataFile):
                 mapISO3[lstLine[1]]  = lstLine[0]
             else:
                 print("Ignored: ", strLine.strip())
+
+    # find country column
+    nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = getColumns(strDataFile)
     
     # find nations
     mapNations = {}
     with open(strDataFile) as inFile:
+        nHeaderSize = len(inFile.readline().strip().split(","))
         for strLine in inFile:
             lstMatches = reValue.findall(strLine)
             for strMatch in lstMatches:
@@ -65,47 +85,30 @@ def list_nations(strDataFile):
 strDataFile = "owid_monkeypox.csv"
 
 strNation = "World"
-nNationIndex = 1
 bUC = False
 strUC = ""
-if len(sys.argv) > 1:
-    if "help" in sys.argv[1] or "-h" == sys.argv[1]:
-        print("")
-        print("python3 mpx_pandemic.py [-n --nations] [-c] <<ISO3>>")
-        print("")
-        print("ISO3 is three-letter ISO code")
-        print("Taiwan is not part of China")
-        print("")
-        print("-n or --nations lists all nations (including name and ISO code) and their total case numbers")
-        print("")
-        print("-c drops the confirmed case requirement (adds _uc to output filenames")
-        print("")
-        print("3 weeks with > 200 confirmed cases is required for analysis, otherwise")
-        print(" just the summary file is generated")
-        print("")
-        print("ISO3 argument generates YYYY-DD-MM_owid_ISO3.csv and")
-        print(" YYYY-DD-MM_fit_nation_name.png")
-        print("")
-        print("If no ISO3 given World is used")
-        print("")
-        print("Data is downloaded from https://ourworldindata.org/monkeypox via")
-        print(" https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
-        print(" to "+strDataFile)
-        sys.exit(0)
-    elif "-n" == sys.argv[1] or "--nations" == sys.argv[1]:
-        list_nations(strDataFile)
-        sys.exit(0)
-    elif "-c" == sys.argv[1]:
-        bUC = True
-        strUC = "_uc"
-        nNationIndex = 2
-    elif sys.argv[1].startswith("-"):
-        print("Unrecognized option: ", sys.argv[1])
-        print("Try -h for help")
-        sys.exit(0)
-        
-    if len(sys.argv) > nNationIndex:
-        strNation = sys.argv[nNationIndex]
+    
+pParser = argparse.ArgumentParser(prog="python3 mpx_pandemic.py", description="Download and plot monkeypox data from OWID")
+pParser.add_argument("nation", help="ISO3 code for target nation, generates YYYY-DD-MM_owid_ISO3.csv, \
+YYYY-DD-MM_fit_ISO3.png, YYYY-DD-MM_fit_ISO3_linear.png \
+If no nation given 'world' is used. Taiwan is not part of China. \
+Data is downloaded from https://ourworldindata.org/monkeypox via \
+ https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv \
+ to "+strDataFile, nargs="?", default="")
+pParser.add_argument("--nations", "-n", action="store_true", help="List nations by ISO3 code")
+pParser.add_argument("-c", action="store_true", help="drops the confirmed case requirement (adds _uc to output filenames")
+
+pArgs = pParser.parse_args(sys.argv[1:])
+    
+if pArgs.nations:
+    listNations(strDataFile)
+    sys.exit(0)
+elif pArgs.c:
+    bUC = True
+    strUC = "_uc"
+    
+if len(pArgs.nation):
+    strNation = pArgs.nation
 
 print("Processing: ", strNation)
 
@@ -118,24 +121,10 @@ try:
     download_data(strDataFile)
 except Exception as e:
     print(e)
-    print("PROBABLY DUE TO DATA FILE FORMAT CHANGE")
-    print("Expect columns: Status, Country, Date_confirmation, Date_entry to exist")
-    print("Check downloaded file: ", strDataFile," and see if header has changed")
     sys.exit(0)
 
 # get columns
-with open(strDataFile) as inFile:
-    lstHeader = inFile.readline().split(",")
-    nHeaderSize = len(lstHeader)
-    for nI, strWord in enumerate(lstHeader):
-        if strWord == "Country_ISO3":
-            nCountryIndex = nI
-        elif strWord == "Date_confirmation":
-            nDateIndex = nI
-        elif strWord == "Status":
-            nStatusIndex = nI
-        elif strWord == "Date_entry":
-            nUnconfirmedDateIndex = nI
+nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = getColumns(strDataFile)
     
 # import the data
 pBaseDate = datetime(2022, 4, 20)
@@ -144,8 +133,7 @@ nMaxDay = 0
 strNationLower = strNation.lower().replace(" ","_")
 pLastDate = pBaseDate
 with open(strDataFile) as inFile:
-    lstHeader = inFile.readline().split(",")
-    
+    nHeaderSize = len(inFile.readline().strip().split(","))    
     for strLine in inFile:
         lstMatches = reValue.findall(strLine)
         for strMatch in lstMatches:
@@ -205,7 +193,7 @@ with open("monkeypox_"+strNationLower+"_daily.csv", "w") as outFile:
         nTotal += nCount
         outFile.write(str(nI)+" "+str(nCount)+" "+str(nTotal)+"\n")
 
-# only fit for days > 200
+# only fit for weeks with > 200 new cases
 for nI, nCount in enumerate(lstCount):
     if nCount > 200:
         nFitStart = nI
@@ -216,7 +204,7 @@ if nFitStart < 0 or len(lstDays) - nFitStart < 3:
     print("Insufficient data for fitting. Must have three weeks > 200 new cases per week")
     sys.exit(0)
 
-# fit the data
+# fit the data using linear fit to logs (=> log weighting of error)
 lstCoeffs = np.polyfit(lstDays[nFitStart:], np.log(lstCount[nFitStart:]), deg=1)
 fEfoldingTime = 1/lstCoeffs[0]
 fBase = math.exp(lstCoeffs[1])
@@ -238,10 +226,10 @@ if nCount > 0:
     print("Doubling time (days): %4.2f"%fDoublingTime)
     print("RMS of Log Fit: %5.3F"%math.sqrt(fLogRMS/nCount))
 
-# correct last point for incomplete data
+# correct last point for incomplete data (after fitting: visual correction only)
 lstCount[-1] = 1.15*lstCount[-1]
 
-# plot with dates
+# log plot with dates
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
 pLocator = mdates.AutoDateLocator()
 pFormatter = mdates.AutoDateFormatter(pLocator)
@@ -253,9 +241,9 @@ if bUC:
     pPlot.set_title("Monkeypox "+strNation+" Weekly New Cases (incl. unconfirmed)")
 else:
     pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
-    
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
+
 pPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
             xy=(.14, .85), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
@@ -291,7 +279,7 @@ pPlot.grid(True, linewidth=0.2)
 pFigure.autofmt_xdate()
 pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
 
-# plot linear with dates
+# linear plot with dates and log inset
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
 pLocator = mdates.AutoDateLocator()
 pFormatter = mdates.AutoDateFormatter(pLocator)
@@ -330,7 +318,7 @@ pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
 pPlot.grid(True, linewidth=0.2)
 
-left, bottom, width, height = [0.19, 0.45, 0.4, 0.4]
+left, bottom, width, height = [0.19, 0.45, 0.4, 0.4] # log-plot inset
 pLogPlot = pFigure.add_axes([left, bottom, width, height])
 pLogPlot.set_yscale("log")
 pLogPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
@@ -343,14 +331,13 @@ pLogPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
             xy=(.1, .11), xycoords='axes fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=12, color="crimson")
-
 pLogPlot.set_facecolor('lightgrey')
 pLogPlot.grid(True, linewidth=0.2)
 for n, label in enumerate(pLogPlot.xaxis.get_ticklabels()):
-    label.set_fontsize(8)
+    label.set_fontsize(8) # sparse, small, date tics
     if not n%2:
         label.set_visible(False)
 
-#pFigure.autofmt_xdate()
+#pFigure.autofmt_xdate() # doing this creates angled dates that use more real estate
 strUC += "_linear"
 pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
