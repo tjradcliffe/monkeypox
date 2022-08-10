@@ -136,9 +136,6 @@ with open(strDataFile) as inFile:
             nStatusIndex = nI
         elif strWord == "Date_entry":
             nUnconfirmedDateIndex = nI
-        elif strWord == "Gender":
-            nGenderIndex = nI
-#        print(nI, strWord)
     
 # import the data
 pBaseDate = datetime(2022, 4, 20)

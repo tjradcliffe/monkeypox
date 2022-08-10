@@ -16,7 +16,22 @@ reValue = re.compile(r'"(.*?)"')
 def count_nations(strDataFile):
     
     # download if required
-    nHeaderSize, nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = download_data(strDataFile)
+    download_data(strDataFile)
+
+    # get columns
+    with open(strDataFile) as inFile:
+        lstHeader = inFile.readline().split(",")
+        nHeaderSize = len(lstHeader)
+        for nI, strWord in enumerate(lstHeader):
+            if strWord == "Country_ISO3":
+                nCountryIndex = nI
+            elif strWord == "Date_confirmation":
+                nDateIndex = nI
+            elif strWord == "Status":
+                nStatusIndex = nI
+            elif strWord == "Date_entry":
+                nUnconfirmedDateIndex = nI
+    #        print(nI, strWord)
     
     # find nations
     lstNewNations = []
