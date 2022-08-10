@@ -167,23 +167,25 @@ lstDays = []
 lstCount = []
 lstDayCount = []
 nFitStart = -1
+for nI in range(nMaxDay, -1, -1):
+    if nI in mapDate:
+        lstWeek.append(mapDate[nI])
+        lstDayCount.insert(0, mapDate[nI]) # keep track of daily
+    else:
+        lstWeek.append(0)
+        lstDayCount.insert(0, 0) # keep track of daily
+
+    if len(lstWeek) == 7:
+        nCount = sum(lstWeek)
+        lstWeek = []
+
+        lstDays.insert(0, nI+3)
+        lstCount.insert(0, nCount)
+
+# dump to file
 with open(strDate+"_owid_"+strNationLower+strUC+".csv", "w") as outFile:
-    for nI in range(nMaxDay, -1, -1):
-        if nI in mapDate:
-            lstWeek.append(mapDate[nI])
-            lstDayCount.insert(0, mapDate[nI]) # keep track of daily
-        else:
-            lstWeek.append(0)
-            lstDayCount.insert(0, 0) # keep track of daily
-
-        if len(lstWeek) == 7:
-            nCount = sum(lstWeek)
-            outFile.write(str(nI+3)+" "+str(nCount)+"\n")
-#            print(nI+3, nCount)
-            lstWeek = []
-
-            lstDays.insert(0, nI+3)
-            lstCount.insert(0, nCount)
+    for nI, nDay in enumerate(lstDays):
+        outFile.write(str(nDay)+" "+str(lstCount[nI])+"\n")
 
 # dump day count for debugging/inspections
 with open("monkeypox_"+strNationLower+"_daily.csv", "w") as outFile:
@@ -268,6 +270,10 @@ pPlot.annotate('= partial data, corrected',
             xy=(.16, .71), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
+pPlot.annotate('Code: https://github.com/tjradcliffe/monkeypox',
+            xy=(.48, .28), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=8)            
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
             xy=(.3, .25), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
@@ -308,7 +314,12 @@ pPlot.annotate('x',
 pPlot.annotate('= partial data, corrected',
             xy=(.66, .21), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
+            fontsize=8)
+pPlot.annotate('Code: https://github.com/tjradcliffe/monkeypox',
+            xy=(.48, .18), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
+
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
             xy=(.3, .15), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
