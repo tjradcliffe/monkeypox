@@ -23,16 +23,14 @@ def getColumns(strDataFile):
     with open(strDataFile) as inFile:
         lstHeader = inFile.readline().split(",")
         for nI, strWord in enumerate(lstHeader):
-            if strWord == "Country_ISO3":
+            if strWord == "iso_code":
                 nCountryIndex = nI
-            elif strWord == "Date_confirmation":
+            elif strWord == "date":
                 nDateIndex = nI
-            elif strWord == "Status":
-                nStatusIndex = nI
-            elif strWord == "Date_entry":
-                nUnconfirmedDateIndex = nI
+            elif strWord == "new_cases":
+                nCasesIndex = nI
 
-    return nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex
+    return nCountryIndex, nDateIndex, nCasesIndex
     
 def listNations(strDataFile):
     """List nations and their ISO3 codes"""
@@ -55,7 +53,7 @@ def listNations(strDataFile):
                 print("Ignored: ", strLine.strip())
 
     # find country column
-    nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = getColumns(strDataFile)
+    nCountryIndex, nDateIndex, nCasesIndex = getColumns(strDataFile)
     
     # find nations
     mapNations = {}
@@ -67,11 +65,10 @@ def listNations(strDataFile):
                 strLine = strLine.replace(strMatch, strMatch.replace(",", "DNUSID"))
             lstLine = strLine.split(",")
             if len(lstLine) != nHeaderSize: continue
-            if lstLine[nStatusIndex].lower() == "confirmed": 
-                strCountry = lstLine[nCountryIndex]
-                if strCountry not in mapNations:
-                    mapNations[strCountry] = 0
-                mapNations[strCountry] += 1
+            strCountry = lstLine[nCountryIndex]
+            if strCountry not in mapNations:
+                mapNations[strCountry] = 0
+            mapNations[strCountry] += 1
                 
     lstNations = list(mapNations)
     lstNations.sort()
@@ -85,27 +82,21 @@ def listNations(strDataFile):
 strDataFile = "owid_monkeypox.csv"
 
 strNation = "World"
-bUC = False
-strUC = ""
     
 pParser = argparse.ArgumentParser(prog="python3 mpx_pandemic.py", description="Download and plot monkeypox data from OWID")
 pParser.add_argument("nation", help="ISO3 code for target nation, generates YYYY-DD-MM_owid_ISO3.csv, \
 YYYY-DD-MM_fit_ISO3.png, YYYY-DD-MM_fit_ISO3_linear.png \
 If no nation given 'world' is used. Taiwan is not part of China. \
 Data is downloaded from https://ourworldindata.org/monkeypox via \
- https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv \
+ https://raw.githubusercontent.com/owid/monkeypox/main/owid-monkeypox-data.csv \
  to "+strDataFile, nargs="?", default="")
 pParser.add_argument("--nations", "-n", action="store_true", help="List nations by ISO3 code")
-pParser.add_argument("-c", action="store_true", help="drops the confirmed case requirement (adds _uc to output filenames")
 
 pArgs = pParser.parse_args(sys.argv[1:])
     
 if pArgs.nations:
     listNations(strDataFile)
     sys.exit(0)
-elif pArgs.c:
-    bUC = True
-    strUC = "_uc"
     
 if len(pArgs.nation):
     strNation = pArgs.nation
@@ -124,7 +115,7 @@ except Exception as e:
     sys.exit(0)
 
 # get columns
-nCountryIndex, nDateIndex, nStatusIndex, nUnconfirmedDateIndex = getColumns(strDataFile)
+nCountryIndex, nDateIndex, nCasesIndex = getColumns(strDataFile)
     
 # import the data
 pBaseDate = datetime(2022, 4, 20)
@@ -140,20 +131,16 @@ with open(strDataFile) as inFile:
             strLine = strLine.replace(strMatch, strMatch.replace(",", " "))
         lstLine = strLine.split(",")
         if len(lstLine) != nHeaderSize: continue
-        if lstLine[nStatusIndex].lower() == "confirmed" or (bUC and lstLine[nStatusIndex] != "discarded"): 
-            if strNation == "World" or lstLine[nCountryIndex] == strNation:
-                if bUC:
-                    nYear, nMonth, nDay = map(int, lstLine[nUnconfirmedDateIndex].split("-"))
-                else:
-                    nYear, nMonth, nDay = map(int, lstLine[nDateIndex].split("-"))
-                pDate = datetime(nYear, nMonth, nDay)
+        if strNation == "World" or lstLine[nCountryIndex] == strNation:
+            nYear, nMonth, nDay = map(int, lstLine[nDateIndex].split("-"))
+            pDate = datetime(nYear, nMonth, nDay)
 #                print(nYear, nMonth, nDay)
-                nDay = (pDate-pBaseDate).days
-                if nDay not in mapDate:
-                    mapDate[nDay] = 0
-                mapDate[nDay] += 1
-                if nDay > nMaxDay: nMaxDay = nDay
-                if pDate > pLastDate: pLastDate = pDate
+            nDay = (pDate-pBaseDate).days
+            if nDay not in mapDate:
+                mapDate[nDay] = 0
+            mapDate[nDay] += int(float(lstLine[nCasesIndex]))
+            if nDay > nMaxDay: nMaxDay = nDay
+            if pDate > pLastDate: pLastDate = pDate
 
 # look at most recent data in file
 print("Last updated: ", pLastDate," which was ", (pToday-pLastDate).days," days ago")
@@ -183,7 +170,7 @@ for nI in range(nMaxDay, -1, -1):
         lstCount.insert(0, nCount)
 
 # dump to file
-with open(strDate+"_owid_"+strNationLower+strUC+".csv", "w") as outFile:
+with open(strDate+"_owid_"+strNationLower+".csv", "w") as outFile:
     for nI, nDay in enumerate(lstDays):
         outFile.write(str(nDay)+" "+str(lstCount[nI])+"\n")
 
@@ -214,7 +201,7 @@ fDoublingTime = math.log(2)*fEfoldingTime
 fit = np.poly1d(lstCoeffs)
 fLogRMS = 0.0
 nCount = 0
-with open(strDate+"_fit_"+strNationLower+strUC+".csv", "w") as outFile:
+with open(strDate+"_fit_"+strNationLower+".csv", "w") as outFile:
     outFile.write("# Doubling: "+str(fDoublingTime)+"\n")
     outFile.write("# "+str(fBase)+"+exp(nDay/"+str(fEfoldingTime)+")\n")
     for nI, nDay in enumerate(lstDays):
@@ -239,10 +226,7 @@ pFigure, pPlot = plt.subplots()
 pPlot.xaxis.set_major_locator(pLocator)
 pPlot.xaxis.set_major_formatter(pFormatter)
 pPlot.set_yscale("log")
-if bUC:
-    pPlot.set_title("Monkeypox "+strNation+" Weekly New Cases (incl. unconfirmed)")
-else:
-    pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
+pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
 
@@ -283,7 +267,7 @@ pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
 pPlot.grid(True, linewidth=0.2)
 pFigure.autofmt_xdate()
-pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
+pFigure.savefig(strDate+"_owid_"+strNationLower+".png")
 
 # linear plot with dates and log inset
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
@@ -292,10 +276,7 @@ pFormatter = mdates.AutoDateFormatter(pLocator)
 pFigure, pPlot = plt.subplots()
 pPlot.xaxis.set_major_locator(pLocator)
 pPlot.xaxis.set_major_formatter(pFormatter)
-if bUC:
-    pPlot.set_title("Monkeypox "+strNation+" Weekly New Cases (incl. unconfirmed)")
-else:
-    pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
+pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
     
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
@@ -326,29 +307,29 @@ pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox
             fontsize=8)
 pPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
 pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
-pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
+#pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
 pPlot.grid(True, linewidth=0.2)
 
-left, bottom, width, height = [0.19, 0.45, 0.4, 0.4] # log-plot inset
-pLogPlot = pFigure.add_axes([left, bottom, width, height])
-pLogPlot.set_yscale("log")
-pLogPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
-pLogPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
-pLogPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
-pLogPlot.annotate("Log Scale", xy=(0.1, 0.9), xycoords='axes fraction', 
-            horizontalalignment='left', verticalalignment='top',
-            fontsize=12)
-pLogPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
-            xy=(.1, .11), xycoords='axes fraction',
-            horizontalalignment='left', verticalalignment='top',
-            fontsize=12, color="crimson")
-pLogPlot.set_facecolor('lightgrey')
-pLogPlot.grid(True, linewidth=0.2)
-for n, label in enumerate(pLogPlot.xaxis.get_ticklabels()):
-    label.set_fontsize(8) # sparse, small, date tics
-    if not n%2:
-        label.set_visible(False)
+if False:
+    left, bottom, width, height = [0.19, 0.4, 0.4, 0.4] # log-plot inset
+    pLogPlot = pFigure.add_axes([left, bottom, width, height])
+    pLogPlot.set_yscale("log")
+    pLogPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
+    pLogPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
+    pLogPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
+    pLogPlot.annotate("Log Scale", xy=(0.1, 0.9), xycoords='axes fraction', 
+                horizontalalignment='left', verticalalignment='top',
+                fontsize=12)
+    pLogPlot.annotate('Doubling Time: '+str(fDoublingTime)[0:5]+" days",
+                xy=(.1, .11), xycoords='axes fraction',
+                horizontalalignment='left', verticalalignment='top',
+                fontsize=12, color="crimson")
+    pLogPlot.set_facecolor('lightgrey')
+    pLogPlot.grid(True, linewidth=0.2)
+    for n, label in enumerate(pLogPlot.xaxis.get_ticklabels()):
+        label.set_fontsize(8) # sparse, small, date tics
+        if not n%2:
+            label.set_visible(False)
 
 #pFigure.autofmt_xdate() # doing this creates angled dates that use more real estate
-strUC += "_linear"
-pFigure.savefig(strDate+"_owid_"+strNationLower+strUC+".png")
+pFigure.savefig(strDate+"_owid_"+strNationLower+"_linear.png")

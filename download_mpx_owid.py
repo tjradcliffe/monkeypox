@@ -13,12 +13,16 @@ def download_data(strDataFile):
             bDownload = False
 
     if bDownload:
+        strURL = "https://raw.githubusercontent.com/owid/monkeypox/main/owid-monkeypox-data.csv"
         print("****DOWNLOADING****")
-        pResponse = requests.get("https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
+        pResponse = requests.get(strURL)
         if pResponse.status_code != 200:
-            print("Failed to download: https://raw.githubusercontent.com/globaldothealth/monkeypox/main/latest.csv")
+            print("Failed to download: "+strURL)
             print("Error code:", pResponse.status_code)
             sys.exit(-1)
 
         with open(strDataFile, "w") as outFile:
             outFile.write(pResponse.text+"\n")
+
+    # header length
+    return len(open(strDataFile).readline().split(','))
