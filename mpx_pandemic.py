@@ -7,6 +7,7 @@ import sys
 import time
 
 import numpy as np
+from scipy.optimize import curve_fit
 
 import matplotlib
 import matplotlib.dates as mdates
@@ -18,6 +19,10 @@ from download_mpx_owid import download_data
 # for dealing with commas in quoted fields
 reValue = re.compile(r'"(.*?)"')
 
+def gauss(fX, *lstParams):
+    fArea, fMean, fSigma = lstParams
+    return fArea*np.exp(-(fX-fMean)**2/(2.*fSigma**2))
+    
 def getColumns(strDataFile):
     """Find columns in data file"""
     with open(strDataFile) as inFile:
@@ -218,6 +223,11 @@ if nCount > 0:
 # correct last point for incomplete data (after fitting: visual correction only)
 lstCount[-1] = 1.15*lstCount[-1]
 
+# Now pandemic is easing, fit with guassian
+lstParams = [13000, 120, 30]
+lstCoeff, lstCovariance = curve_fit(gauss, lstDays[nFitStart:], lstCount[nFitStart:], p0 = lstParams)
+lstFitted = gauss(lstDays, *lstCoeff)
+
 # log plot with dates
 lstDates = [pBaseDate+timedelta(days=x) for x in lstDays]
 pLocator = mdates.AutoDateLocator()
@@ -280,34 +290,35 @@ pPlot.set_title("Monkeypox "+strNation+" Weekly New Confirmed Cases")
     
 pPlot.set_xlabel("Date")
 pPlot.set_ylabel("Count")
-pPlot.annotate('Fit: '+str(fBase)[0:5]+"*exp(nDay/"+str(fEfoldingTime)[0:5]+")",
-            xy=(.64, .27), xycoords='figure fraction',
-            horizontalalignment='left', verticalalignment='top',
-            fontsize=8)            
 pPlot.annotate('Start day: '+str(pBaseDate.date()),
-            xy=(.64, .24), xycoords='figure fraction',
+            xy=(.70, .36), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
 pPlot.annotate('x',
-            xy=(.64, .215), xycoords='figure fraction',
+            xy=(.655, .335), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=10, color="r")            
 pPlot.annotate('= partial data, corrected',
-            xy=(.66, .21), xycoords='figure fraction',
+            xy=(.675, .33), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)
+pPlot.annotate('Fit: '+str(lstCoeff[0])[0:5]+"*exp(-(x-"+str(lstCoeff[1])[0:5]+")**2)/(2*"+str(lstCoeff[2])[0:5]+"**2))",
+            xy=(.51, .30), xycoords='figure fraction',
+            horizontalalignment='left', verticalalignment='top',
+            fontsize=8)            
 pPlot.annotate('Code: https://github.com/tjradcliffe/monkeypox',
-            xy=(.48, .18), xycoords='figure fraction',
+            xy=(.48, .27), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)            
 
 pPlot.annotate('Generated: '+strDate+" from https://ourworldindata.org/monkeypox",
-            xy=(.3, .15), xycoords='figure fraction',
+            xy=(.3, .24), xycoords='figure fraction',
             horizontalalignment='left', verticalalignment='top',
             fontsize=8)
 pPlot.plot(lstDates[nFitStart:-1], lstCount[nFitStart:-1], "bx")
 pPlot.plot(lstDates[-1:], lstCount[-1:], "rx")
 #pPlot.plot(lstDates[nFitStart:], [math.exp(fit(x)) for x in lstDays[nFitStart:]])
+pPlot.plot(lstDates[nFitStart:], lstFitted[nFitStart:])
 pPlot.grid(True, linewidth=0.2)
 
 if False:
@@ -331,5 +342,5 @@ if False:
         if not n%2:
             label.set_visible(False)
 
-#pFigure.autofmt_xdate() # doing this creates angled dates that use more real estate
+pFigure.autofmt_xdate() # doing this creates angled dates that use more real estate
 pFigure.savefig(strDate+"_owid_"+strNationLower+"_linear.png")
